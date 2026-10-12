@@ -36,9 +36,6 @@ runs:
           CONFIG_SND_VIRTIO \
           CONFIG_VIRTIO_VSOCKETS \
           CONFIG_VIRTIO_VSOCKETS_COMMON \
-          CONFIG_GOLDFISH \
-          CONFIG_GOLDFISH_PIPE \
-          CONFIG_GOLDFISH_ADDRESS_SPACE \
           CONFIG_DM_VERITY \
           CONFIG_EROFS_FS \
         ; do

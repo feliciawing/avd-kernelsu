@@ -149,11 +149,9 @@ jobs:
 
           ARCH="${{ inputs.arch }}"
 
-          # Merge our fragment into kernel's gki.fragment (strip GOLDFISH_PIPE — absent from android16 Kconfig)
-          sed -i '/CONFIG_GOLDFISH_PIPE/d' common/arch/arm64/configs/gki.fragment 2>/dev/null || true
-          sed -i '/CONFIG_GOLDFISH_PIPE/d' common/arch/x86/configs/gki.fragment 2>/dev/null || true
-          cat "$GITHUB_WORKSPACE/gki.fragment" >> common/arch/arm64/configs/gki.fragment 2>/dev/null || true
-          cat "$GITHUB_WORKSPACE/gki.fragment" >> common/arch/x86/configs/gki.fragment 2>/dev/null || true
+          # Copy fragment to kernel tree
+          cp "$GITHUB_WORKSPACE/gki.fragment" common/arch/arm64/configs/gki.fragment 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/gki.fragment" common/arch/x86/configs/gki.fragment 2>/dev/null || true
 
           if [ -f "build/build.sh" ]; then
             # Old build system (produces matching kernel + modules)
@@ -196,11 +194,11 @@ jobs:
             # Bazel build system
             if [ "$ARCH" = "x86_64" ]; then
               DEFCONFIG_FRAG="//common:arch/x86/configs/gki.fragment"
-              KERNEL_TARGET="//common:kernel_x86_64_dist"
+              KERNEL_TARGET="//common:kernel_x86_64"
               VIRT_TARGET="//common-modules/virtual-device:virtual_device_x86_64_dist"
             else
               DEFCONFIG_FRAG="//common:arch/arm64/configs/gki.fragment"
-              KERNEL_TARGET="//common:kernel_aarch64_dist"
+              KERNEL_TARGET="//common:kernel_aarch64"
               VIRT_TARGET="//common-modules/virtual-device:virtual_device_aarch64_dist"
             fi
 
