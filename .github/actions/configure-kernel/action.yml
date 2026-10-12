@@ -13,39 +13,50 @@ runs:
       shell: bash
       run: |
         FRAG="${{ github.workspace }}/gki.fragment"
-
-        # Only add configs that exist in Kconfig - check before adding
         KERNEL_SRC="${{ github.workspace }}/kernel/common"
-        echo "# AVD virtio built-in configs" > "$FRAG"
+        KVER="${{ inputs.kernel_version }}"
+        echo "# AVD configs" > "$FRAG"
 
-        # Check each config exists in Kconfig before adding to fragment
-        for cfg in \
-          CONFIG_VIRTIO \
-          CONFIG_VIRTIO_PCI \
-          CONFIG_VIRTIO_PCI_LEGACY \
-          CONFIG_VIRTIO_MMIO \
-          CONFIG_VIRTIO_BLK \
-          CONFIG_VIRTIO_NET \
-          CONFIG_VIRTIO_CONSOLE \
-          CONFIG_VIRTIO_INPUT \
-          CONFIG_VIRTIO_BALLOON \
-          CONFIG_VIRTIO_MEM \
-          CONFIG_DRM_VIRTIO_GPU \
-          CONFIG_HW_RANDOM_VIRTIO \
-          CONFIG_VIRTIO_DMA_SHARED_BUFFER \
-          CONFIG_SND_VIRTIO \
-          CONFIG_VIRTIO_VSOCKETS \
-          CONFIG_VIRTIO_VSOCKETS_COMMON \
-          CONFIG_DM_VERITY \
-          CONFIG_EROFS_FS \
-        ; do
-          # Strip CONFIG_ prefix to get Kconfig symbol name
+        # android16 (6.12) uses Bazel which enforces module_outs strictly.
+        # Virtio drivers are already available as virtual device modules,
+        # so skip forcing them built-in to avoid module_outs conflicts.
+        if [ "$KVER" = "6.12" ]; then
+          echo "  Skipping virtio built-in overrides for $KVER (Bazel build)"
+        else
+          for cfg in \
+            CONFIG_VIRTIO \
+            CONFIG_VIRTIO_PCI \
+            CONFIG_VIRTIO_PCI_LEGACY \
+            CONFIG_VIRTIO_MMIO \
+            CONFIG_VIRTIO_BLK \
+            CONFIG_VIRTIO_NET \
+            CONFIG_VIRTIO_CONSOLE \
+            CONFIG_VIRTIO_INPUT \
+            CONFIG_VIRTIO_BALLOON \
+            CONFIG_VIRTIO_MEM \
+            CONFIG_DRM_VIRTIO_GPU \
+            CONFIG_HW_RANDOM_VIRTIO \
+            CONFIG_VIRTIO_DMA_SHARED_BUFFER \
+            CONFIG_SND_VIRTIO \
+            CONFIG_VIRTIO_VSOCKETS \
+            CONFIG_VIRTIO_VSOCKETS_COMMON \
+          ; do
+            SYM="${cfg#CONFIG_}"
+            if grep -rq "^config $SYM$" "$KERNEL_SRC" 2>/dev/null; then
+              echo "${cfg}=y" >> "$FRAG"
+              echo "  Added: ${cfg}=y"
+            else
+              echo "  Skipped (not in Kconfig): ${cfg}"
+            fi
+          done
+        fi
+
+        # DM_VERITY and EROFS_FS apply to all versions
+        for cfg in CONFIG_DM_VERITY CONFIG_EROFS_FS; do
           SYM="${cfg#CONFIG_}"
           if grep -rq "^config $SYM$" "$KERNEL_SRC" 2>/dev/null; then
             echo "${cfg}=y" >> "$FRAG"
             echo "  Added: ${cfg}=y"
-          else
-            echo "  Skipped (not in Kconfig): ${cfg}"
           fi
         done
 
