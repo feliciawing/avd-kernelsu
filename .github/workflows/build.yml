@@ -211,12 +211,11 @@ jobs:
 
             # Build virtual device modules for AVD
             if [ "${{ inputs.build_modules }}" = "true" ]; then
-              tools/bazel run \
+              tools/bazel build \
                 --config=fast \
                 --lto=thin \
                 --defconfig_fragment=${DEFCONFIG_FRAG} \
-                ${VIRT_TARGET} \
-                -- --dist_dir=dist_virt || echo "WARNING: Virtual device modules build failed"
+                ${VIRT_TARGET} || echo "WARNING: Virtual device modules build failed"
             fi
           fi
 
@@ -248,7 +247,7 @@ jobs:
             cp "$DIST"/initramfs.img "$OUT_DIR/" 2>/dev/null || true
           done
 
-          # 2. Check Bazel output (fallback)
+          # 2. Check Bazel output (fallback for kernel image)
           if [ ! -f "$OUT_DIR/bzImage" ] && [ ! -f "$OUT_DIR/Image" ]; then
             echo "No build.sh output found, checking Bazel..."
             if [ "$ARCH" = "x86_64" ]; then
@@ -258,13 +257,19 @@ jobs:
               BAZEL_OUT="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64"
               cp "$BAZEL_OUT/Image" "$OUT_DIR/" 2>/dev/null || true
             fi
-            # Bazel virtual device dist
-            VIRT_DIST="$GITHUB_WORKSPACE/kernel/dist_virt"
-            if [ -d "$VIRT_DIST" ]; then
-              cp "$VIRT_DIST"/*.ko "$OUT_DIR/modules/" 2>/dev/null || true
-              cp "$VIRT_DIST"/modules.* "$OUT_DIR/modules/" 2>/dev/null || true
-              cp "$VIRT_DIST"/system_dlkm* "$OUT_DIR/" 2>/dev/null || true
-            fi
+          fi
+
+          # 3. Check Bazel virtual device modules (always, separate from kernel)
+          if [ "$ARCH" = "x86_64" ]; then
+            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_x86_64_dist"
+          else
+            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_aarch64_dist"
+          fi
+          if [ -d "$BAZEL_VIRT" ]; then
+            echo "=== Found Bazel virtual device modules at $BAZEL_VIRT ==="
+            cp "$BAZEL_VIRT"/*.ko "$OUT_DIR/modules/" 2>/dev/null || true
+            cp "$BAZEL_VIRT"/modules.* "$OUT_DIR/modules/" 2>/dev/null || true
+            cp "$BAZEL_VIRT"/system_dlkm* "$OUT_DIR/" 2>/dev/null || true
           fi
 
           # 3. Create initramfs with matching modules for AVD use
