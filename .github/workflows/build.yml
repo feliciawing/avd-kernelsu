@@ -149,9 +149,11 @@ jobs:
 
           ARCH="${{ inputs.arch }}"
 
-          # Copy fragment to kernel tree
-          cp "$GITHUB_WORKSPACE/gki.fragment" common/arch/arm64/configs/gki.fragment 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE/gki.fragment" common/arch/x86/configs/gki.fragment 2>/dev/null || true
+          # Merge our fragment into kernel's gki.fragment (strip GOLDFISH_PIPE — absent from android16 Kconfig)
+          sed -i '/CONFIG_GOLDFISH_PIPE/d' common/arch/arm64/configs/gki.fragment 2>/dev/null || true
+          sed -i '/CONFIG_GOLDFISH_PIPE/d' common/arch/x86/configs/gki.fragment 2>/dev/null || true
+          cat "$GITHUB_WORKSPACE/gki.fragment" >> common/arch/arm64/configs/gki.fragment 2>/dev/null || true
+          cat "$GITHUB_WORKSPACE/gki.fragment" >> common/arch/x86/configs/gki.fragment 2>/dev/null || true
 
           if [ -f "build/build.sh" ]; then
             # Old build system (produces matching kernel + modules)
