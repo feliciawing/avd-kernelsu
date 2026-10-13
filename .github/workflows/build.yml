@@ -247,16 +247,26 @@ jobs:
             cp "$DIST"/initramfs.img "$OUT_DIR/" 2>/dev/null || true
           done
 
-          # 2. Check Bazel output (fallback for kernel image)
+          # 2. Check Bazel output (kernel image + GKI modules from kernel_*_dist)
+          if [ "$ARCH" = "x86_64" ]; then
+            BAZEL_KERNEL_DIST="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64_dist"
+          else
+            BAZEL_KERNEL_DIST="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64_dist"
+          fi
+          if [ -d "$BAZEL_KERNEL_DIST" ]; then
+            echo "=== Found Bazel kernel dist at $BAZEL_KERNEL_DIST ==="
+            ls "$BAZEL_KERNEL_DIST/" | head -20
+            cp "$BAZEL_KERNEL_DIST/bzImage" "$OUT_DIR/" 2>/dev/null || true
+            cp "$BAZEL_KERNEL_DIST/Image" "$OUT_DIR/" 2>/dev/null || true
+            # GKI modules (virtio_blk, virtio_console, etc.) live here
+            find "$BAZEL_KERNEL_DIST" -name "*.ko" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
+            find "$BAZEL_KERNEL_DIST" -name "modules.*" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
+          fi
           if [ ! -f "$OUT_DIR/bzImage" ] && [ ! -f "$OUT_DIR/Image" ]; then
-            echo "No build.sh output found, checking Bazel..."
+            echo "kernel_*_dist not found, trying plain target..."
             if [ "$ARCH" = "x86_64" ]; then
-              # kernel_x86_64_dist dist dir, then plain target fallback
-              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64_dist/bzImage" "$OUT_DIR/" 2>/dev/null || \
               cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64/bzImage" "$OUT_DIR/" 2>/dev/null || true
             else
-              # kernel_aarch64_dist dist dir, then plain target fallback
-              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64_dist/Image" "$OUT_DIR/" 2>/dev/null || \
               cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image" "$OUT_DIR/" 2>/dev/null || true
             fi
           fi

@@ -17,10 +17,11 @@ runs:
         KVER="${{ inputs.kernel_version }}"
         echo "# AVD configs" > "$FRAG"
 
-        # Force virtio drivers built-in for all kernel versions.
-        # For android16 (6.12) Bazel builds, the virtual_device_aarch64_dist target
-        # may fail to collect virtio_blk/virtio_pci as loadable modules, so we
-        # force them built-in to ensure AVD block device access.
+        # android16 (6.12) uses Bazel which enforces module_outs strictly.
+        # virtio_blk, virtio_console etc. are in module_outs of kernel_aarch64_dist
+        # and must remain as modules; forcing them built-in breaks the build.
+        # They are collected from bazel-bin/common/kernel_aarch64_dist/ in build.yml.
+        if [ "$KVER" != "6.12" ]; then
         for cfg in \
             CONFIG_VIRTIO \
             CONFIG_VIRTIO_PCI \
@@ -47,6 +48,7 @@ runs:
               echo "  Skipped (not in Kconfig): ${cfg}"
             fi
           done
+        fi
 
         # DM_VERITY and EROFS_FS apply to all versions
         for cfg in CONFIG_DM_VERITY CONFIG_EROFS_FS; do
