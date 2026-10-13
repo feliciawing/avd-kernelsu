@@ -260,19 +260,16 @@ jobs:
           fi
 
           # 3. Check Bazel virtual device modules (always, separate from kernel)
+          # virtual_device_aarch64_dist is a launcher script; actual .ko files are in virtual_device_aarch64/
           if [ "$ARCH" = "x86_64" ]; then
-            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_x86_64_dist"
+            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_x86_64"
           else
-            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_aarch64_dist"
+            BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_aarch64"
           fi
           if [ -d "$BAZEL_VIRT" ]; then
-            echo "=== Bazel virtual device dist contents ==="
-            find "$BAZEL_VIRT" -maxdepth 3 | head -40
-            echo "=========================================="
-            # .ko files may be at root or in subdirs
+            echo "=== Found Bazel virtual device modules at $BAZEL_VIRT ==="
             find "$BAZEL_VIRT" -name "*.ko" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
             find "$BAZEL_VIRT" -name "modules.*" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
-            cp "$BAZEL_VIRT"/system_dlkm* "$OUT_DIR/" 2>/dev/null || true
             find "$BAZEL_VIRT" -name "system_dlkm*" -exec cp {} "$OUT_DIR/" \; 2>/dev/null || true
           fi
 
