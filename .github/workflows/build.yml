@@ -266,10 +266,14 @@ jobs:
             BAZEL_VIRT="$GITHUB_WORKSPACE/kernel/bazel-bin/common-modules/virtual-device/virtual_device_aarch64_dist"
           fi
           if [ -d "$BAZEL_VIRT" ]; then
-            echo "=== Found Bazel virtual device modules at $BAZEL_VIRT ==="
-            cp "$BAZEL_VIRT"/*.ko "$OUT_DIR/modules/" 2>/dev/null || true
-            cp "$BAZEL_VIRT"/modules.* "$OUT_DIR/modules/" 2>/dev/null || true
+            echo "=== Bazel virtual device dist contents ==="
+            find "$BAZEL_VIRT" -maxdepth 3 | head -40
+            echo "=========================================="
+            # .ko files may be at root or in subdirs
+            find "$BAZEL_VIRT" -name "*.ko" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
+            find "$BAZEL_VIRT" -name "modules.*" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
             cp "$BAZEL_VIRT"/system_dlkm* "$OUT_DIR/" 2>/dev/null || true
+            find "$BAZEL_VIRT" -name "system_dlkm*" -exec cp {} "$OUT_DIR/" \; 2>/dev/null || true
           fi
 
           # 3. Create initramfs with matching modules for AVD use
