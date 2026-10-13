@@ -273,7 +273,15 @@ jobs:
             find "$BAZEL_VIRT" -name "system_dlkm*" -exec cp {} "$OUT_DIR/" \; 2>/dev/null || true
           fi
 
-          # 3. Create initramfs with matching modules for AVD use
+          # 4. Scavenge any remaining .ko from entire bazel tree (safety net)
+          echo "=== Scavenging *.ko from bazel output tree ==="
+          find "$GITHUB_WORKSPACE/kernel/bazel-bin" -name "*.ko" 2>/dev/null | while read -r k; do
+            b=$(basename "$k")
+            [ -f "$OUT_DIR/modules/$b" ] || cp "$k" "$OUT_DIR/modules/$b"
+          done
+          echo "=== Total modules: $(ls "$OUT_DIR/modules/"*.ko 2>/dev/null | wc -l) ==="
+
+          # 5. Create initramfs with matching modules for AVD use
           MODULE_COUNT=$(ls "$OUT_DIR/modules"/*.ko 2>/dev/null | wc -l)
           if [ "$MODULE_COUNT" -gt 0 ]; then
             echo "=== Creating initramfs with $MODULE_COUNT matching modules ==="
