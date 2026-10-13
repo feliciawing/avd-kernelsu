@@ -247,21 +247,28 @@ jobs:
             cp "$DIST"/initramfs.img "$OUT_DIR/" 2>/dev/null || true
           done
 
-          # 2. Check Bazel output (kernel image + GKI modules from kernel_*_dist)
+          # 2. Check Bazel output (kernel image + GKI modules)
+          # kernel_aarch64_dist is a launcher script (file), not a directory.
+          # Actual .ko outputs from kernel_aarch64 live in kernel_aarch64/ directory.
           if [ "$ARCH" = "x86_64" ]; then
+            BAZEL_KERNEL_DIR="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64"
             BAZEL_KERNEL_DIST="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64_dist"
           else
+            BAZEL_KERNEL_DIR="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64"
             BAZEL_KERNEL_DIST="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64_dist"
           fi
-          if [ -d "$BAZEL_KERNEL_DIST" ]; then
-            echo "=== Found Bazel kernel dist at $BAZEL_KERNEL_DIST ==="
-            ls "$BAZEL_KERNEL_DIST/" | head -20
-            cp "$BAZEL_KERNEL_DIST/bzImage" "$OUT_DIR/" 2>/dev/null || true
-            cp "$BAZEL_KERNEL_DIST/Image" "$OUT_DIR/" 2>/dev/null || true
-            # GKI modules (virtio_blk, virtio_console, etc.) live here
-            find "$BAZEL_KERNEL_DIST" -name "*.ko" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
-            find "$BAZEL_KERNEL_DIST" -name "modules.*" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
-          fi
+          # Try the _dist path first (may be a directory in some Kleaf versions)
+          for BDIR in "$BAZEL_KERNEL_DIST" "$BAZEL_KERNEL_DIR"; do
+            if [ -d "$BDIR" ]; then
+              echo "=== Found Bazel kernel output at $BDIR ==="
+              ls "$BDIR/" | head -20
+              cp "$BDIR/bzImage" "$OUT_DIR/" 2>/dev/null || true
+              cp "$BDIR/Image" "$OUT_DIR/" 2>/dev/null || true
+              find "$BDIR" -name "*.ko" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
+              find "$BDIR" -name "modules.*" -exec cp {} "$OUT_DIR/modules/" \; 2>/dev/null || true
+              break
+            fi
+          done
           if [ ! -f "$OUT_DIR/bzImage" ] && [ ! -f "$OUT_DIR/Image" ]; then
             echo "kernel_*_dist not found, trying plain target..."
             if [ "$ARCH" = "x86_64" ]; then

@@ -17,11 +17,22 @@ runs:
         KVER="${{ inputs.kernel_version }}"
         echo "# AVD configs" > "$FRAG"
 
-        # android16 (6.12) uses Bazel which enforces module_outs strictly.
-        # virtio_blk, virtio_console etc. are in module_outs of kernel_aarch64_dist
-        # and must remain as modules; forcing them built-in breaks the build.
-        # They are collected from bazel-bin/common/kernel_aarch64_dist/ in build.yml.
-        if [ "$KVER" != "6.12" ]; then
+        if [ "$KVER" = "6.12" ]; then
+          # android16 (6.12) Bazel enforces module_outs strictly — virtio_blk is in
+          # module_outs of kernel_aarch64_dist, so it must be =m (not =y) to produce
+          # a .ko. The default config doesn't enable it, hence "partition not found".
+          for cfg in \
+              CONFIG_VIRTIO_BLK \
+            ; do
+              SYM="${cfg#CONFIG_}"
+              if grep -rq "^config $SYM$" "$KERNEL_SRC" 2>/dev/null; then
+                echo "${cfg}=m" >> "$FRAG"
+                echo "  Added: ${cfg}=m"
+              else
+                echo "  Skipped (not in Kconfig): ${cfg}"
+              fi
+            done
+        else
         for cfg in \
             CONFIG_VIRTIO \
             CONFIG_VIRTIO_PCI \
