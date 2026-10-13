@@ -298,6 +298,16 @@ jobs:
             b=$(basename "$k")
             [ -f "$OUT_DIR/modules/$b" ] || cp "$k" "$OUT_DIR/modules/$b"
           done
+
+          # 4b. android16 (6.12): GKI forces CONFIG_VIRTIO_PCI_LEGACY=y (can't override).
+          # Drop virtio_pci*.ko so repack-ramdisk.py removes them from modules.load.
+          # GKI built-in code handles PCI; boot device (virtio_mmio) is unaffected.
+          if [ "$KERNEL_VERSION" = "6.12" ]; then
+            for f in virtio_pci.ko virtio_pci_legacy_dev.ko virtio_pci_modern_dev.ko; do
+              rm -f "$OUT_DIR/modules/$f" && echo "  dropped (GKI built-in): $f"
+            done
+          fi
+
           echo "=== Total modules: $(ls "$OUT_DIR/modules/"*.ko 2>/dev/null | wc -l) ==="
 
           # 5. Create initramfs with matching modules for AVD use

@@ -19,13 +19,13 @@ runs:
 
         if [ "$KVER" = "6.12" ]; then
           # android16 (6.12) Bazel enforces module_outs strictly — must use =m.
-          # virtio_blk: not enabled by default → "partition not found".
-          # virtio_pci*: GKI has =y built-in → .ko exports protected symbol vp_modern_avq_index
-          #              → init fatal reboot. Force =m so .ko loads cleanly.
+          # Only CONFIG_VIRTIO_BLK: not enabled by default → "partition not found".
+          # virtio_pci*: GKI forces =y (can't override to =m, Kleaf config check fails).
+          #   → virtio_pci*.ko dropped from artifact in build.yml so they're absent
+          #   → repack-ramdisk.py drops them from modules.load → init skips them
+          #   → GKI built-in handles PCI, boot device (virtio_mmio) unaffected.
           for cfg in \
               CONFIG_VIRTIO_BLK \
-              CONFIG_VIRTIO_PCI \
-              CONFIG_VIRTIO_PCI_LEGACY \
             ; do
               SYM="${cfg#CONFIG_}"
               if grep -rq "^config $SYM$" "$KERNEL_SRC" 2>/dev/null; then
