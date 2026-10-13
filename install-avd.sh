@@ -64,42 +64,9 @@ if [ ! -f "$AVD_DIR/ramdisk.img.bak" ]; then
 fi
 
 # Repack ramdisk with our modules
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Repacking ramdisk with matching modules..."
-TMPDIR=$(mktemp -d)
-cd "$TMPDIR"
-
-# Extract original ramdisk (it's gzip + cpio)
-if file "$RAMDISK" | grep -q "gzip"; then
-  gzip -dc "$RAMDISK" | cpio -idm 2>/dev/null
-elif file "$RAMDISK" | grep -q "LZ4"; then
-  lz4 -dc "$RAMDISK" | cpio -idm 2>/dev/null
-else
-  # Try as raw cpio
-  cpio -idm < "$RAMDISK" 2>/dev/null
-fi
-
-# Replace modules with our matching ones
-if [ -d "$ARTIFACT_DIR/modules" ] && [ -d "lib/modules" ]; then
-  echo "Replacing kernel modules..."
-  for ko in "$ARTIFACT_DIR/modules"/*.ko; do
-    BASENAME=$(basename "$ko")
-    # Find and replace in ramdisk
-    find lib/modules -name "$BASENAME" -exec cp "$ko" {} \;
-    echo "  Replaced: $BASENAME"
-  done
-
-  # Also copy modules.load if present
-  if [ -f "$ARTIFACT_DIR/modules/modules.load" ]; then
-    find lib/modules -name "modules.load" -exec cp "$ARTIFACT_DIR/modules/modules.load" {} \;
-  fi
-fi
-
-# Repack ramdisk
-echo "Creating new ramdisk..."
-find . | cpio -o -H newc 2>/dev/null | gzip > "$AVD_DIR/ramdisk-ksu.img"
-
-cd -
-rm -rf "$TMPDIR"
+python3 "$SCRIPT_DIR/repack-ramdisk.py" "$RAMDISK" "$ARTIFACT_DIR/modules" "$AVD_DIR/ramdisk-ksu.img"
 
 # Copy kernel
 echo "Copying kernel..."

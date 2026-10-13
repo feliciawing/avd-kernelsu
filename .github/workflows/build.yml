@@ -194,11 +194,11 @@ jobs:
             # Bazel build system
             if [ "$ARCH" = "x86_64" ]; then
               DEFCONFIG_FRAG="//common:arch/x86/configs/gki.fragment"
-              KERNEL_TARGET="//common:kernel_x86_64"
+              KERNEL_TARGET="//common:kernel_x86_64_dist"
               VIRT_TARGET="//common-modules/virtual-device:virtual_device_x86_64_dist"
             else
               DEFCONFIG_FRAG="//common:arch/arm64/configs/gki.fragment"
-              KERNEL_TARGET="//common:kernel_aarch64"
+              KERNEL_TARGET="//common:kernel_aarch64_dist"
               VIRT_TARGET="//common-modules/virtual-device:virtual_device_aarch64_dist"
             fi
 
@@ -251,11 +251,13 @@ jobs:
           if [ ! -f "$OUT_DIR/bzImage" ] && [ ! -f "$OUT_DIR/Image" ]; then
             echo "No build.sh output found, checking Bazel..."
             if [ "$ARCH" = "x86_64" ]; then
-              BAZEL_OUT="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64"
-              cp "$BAZEL_OUT/bzImage" "$OUT_DIR/" 2>/dev/null || true
+              # kernel_x86_64_dist dist dir, then plain target fallback
+              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64_dist/bzImage" "$OUT_DIR/" 2>/dev/null || \
+              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_x86_64/bzImage" "$OUT_DIR/" 2>/dev/null || true
             else
-              BAZEL_OUT="$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64"
-              cp "$BAZEL_OUT/Image" "$OUT_DIR/" 2>/dev/null || true
+              # kernel_aarch64_dist dist dir, then plain target fallback
+              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64_dist/Image" "$OUT_DIR/" 2>/dev/null || \
+              cp "$GITHUB_WORKSPACE/kernel/bazel-bin/common/kernel_aarch64/Image" "$OUT_DIR/" 2>/dev/null || true
             fi
           fi
 
